@@ -1,4 +1,5 @@
-const Graph = require('../graph')
+const Graph = require('../graph');
+const louvain = require('../louvain')
 const assert = require('assert');
 
 describe('Graph data structure', () => {
@@ -64,5 +65,90 @@ describe('Graph data structure', () => {
         const g = Graph.Graph();
         g.addEdge('A','B');
         assert.equal(g.hasEdge('B','A'), true);
+    });
+    it('find the neighbors of a node',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('A','B');
+        g.addEdge('B','C');
+        g.addEdge('A','F');
+        assert.deepEqual(g.neighbors('A'), ['B', 'F']);
+    });
+    it('find no neighbors of a node with no neighbors',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('A');
+        g.addEdge('B','C');
+        assert.deepEqual(g.neighbors('A'), []);
+    });
+});
+
+describe('Modularity calculation', () => {
+    it('modularity of a partition of an empty graph is 0',
+    () => {
+        const g = Graph.Graph();
+        assert.equal(louvain.modularity(g, {}), 0);
+    });
+    it('modularity of a partition of an graph with nodes but no edges is 0',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('A');
+        g.addNode('B');
+        assert.equal(louvain.modularity(g, {}), 0);
+    });
+    it('modularity of a partition of a graph with edges and with all nodes in same community is 0',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('a');
+        g.addEdge('b', 'c')
+        const community1 = 'C1';
+        const partition = { 'a': community1, 'b': community1, 'c': community1}
+        assert.equal(louvain.modularity(g, partition), 0);
+    });
+    it('modularity of a partition with multiple communities, where all edges are intra-community, approaches 1',
+    () => {
+        const g = Graph.Graph();
+        const partition = {};
+        for(var i=0; i<100;i++){
+            g.addEdge(i+'a', i+'b');
+            partition[i+'a'] = i;
+            partition[i+'b'] = i;
+
+        }
+        const modularity = louvain.modularity(g, partition);
+        assert.ok( modularity > 0.99 && modularity <= 1);
+    });
+    it('modularity of a partition with multiple communities, where half of edges are intra-community, approaches 0.5',
+    () => {
+        const g = Graph.Graph();
+        const partition = {};
+        for(var i=0; i<100;i++){
+            g.addEdge(i+'a', i+'b');
+            partition[i+'a'] = i;
+            partition[i+'b'] = i%2? i : i - 1;
+        }
+        const modularity = louvain.modularity(g, partition);
+        assert.ok( modularity > 0.49 && modularity <= 0.5);
+    });
+    it('modularity of a partition with multiple communities, edges, and no intra-community edges is less than 0',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('a','b');
+        g.addEdge('a','c');
+        g.addEdge('c','b');
+        g.addEdge('a','d');
+        g.addEdge('a','e');
+
+        g.addEdge('A','B');
+        g.addEdge('A','C');
+        g.addEdge('C','B');
+        g.addEdge('A','D');
+        g.addEdge('A','E');
+
+
+        const partition = { 'a': 0, 'b': 1, 'c': 2, 'd': 1, 'e': 1,
+            'A': 0, 'B':1, 'C': 2, 'D': 1, 'E': 1}
+        const modularity = louvain.modularity(g, partition);
+        assert.ok( modularity < 0 );
     });
 });
