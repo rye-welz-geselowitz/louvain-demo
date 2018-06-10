@@ -42,6 +42,27 @@ describe('Graph data structure', () => {
         assert.deepEqual(g.nodes(), ['A', 'B']);
         assert.deepEqual(g.edges(), [ ['A', 'B'] ]);
     });
+    it('remove an edge',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('B', 'A');
+        assert.deepEqual(g.nodes(), ['A', 'B']);
+        assert.deepEqual(g.edges(), [ ['A', 'B'] ]);
+        g.removeEdge('B', 'A');
+        assert.deepEqual(g.nodes(), ['A', 'B']);
+        assert.deepEqual(g.edges(), []);
+    });
+    it('removing a non-existent edge leaves graph intact',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('C', 'D');
+        g.addNode('A')
+        assert.deepEqual(g.nodes(), ['A', 'C', 'D']);
+        assert.deepEqual(g.edges(), [ ['C', 'D'] ]);
+        g.removeEdge('B', 'A');
+        assert.deepEqual(g.nodes(), ['A', 'C', 'D']);
+        assert.deepEqual(g.edges(), [ ['C', 'D'] ]);
+    });
     it('determine that graph contains a node',
     () => {
         const g = Graph.Graph();
@@ -83,7 +104,7 @@ describe('Graph data structure', () => {
     });
 });
 
-describe('Modularity calculation', () => {
+describe('Modularity evaluation', () => {
     it('modularity of a partition of an empty graph is 0',
     () => {
         const g = Graph.Graph();
@@ -151,4 +172,35 @@ describe('Modularity calculation', () => {
         const modularity = louvain.modularity(g, partition);
         assert.ok( modularity < 0 );
     });
+});
+
+describe('Lovain method', () => {
+    it('for an empty graph produces an empty partition',
+    () => {
+        const g = Graph.Graph();
+        assert.deepEqual(louvain.partition(g), {});
+    });
+    it('for a graph with no edges, places each node in own community',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('A');
+        g.addNode('B');
+        g.addNode('C');
+        g.addNode('D');
+        assert.deepEqual(louvain.partition(g), {'A': 0, 'B': 1, 'C': 2, 'D': 3});
+    });
+    // it('for a graph with one edges, places nodes in same community',
+    // () => {
+    //     const g = Graph.Graph();
+    //     g.addEdge('Aa', 'Bb');
+    //     g.addEdge('Cc', 'Db')
+    //     assert.deepEqual(louvain.partition(g), {'Aa': 0, 'Bb': 0, 'Cc': 1, 'Dd': 1});
+    // });
+});
+
+describe('Utilities', () => {
+    it('reindex takes a partition and removes gaps in community indices', () => {
+        const partition = {'a': 0, 'b': 2, 'c': 2, 'd': 0, 'e': 60};
+        assert.deepEqual(louvain.reindex(partition), {'a': 0, 'b': 1, 'c': 1, 'd': 0, 'e': 2});
+    })
 });

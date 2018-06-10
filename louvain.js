@@ -22,6 +22,62 @@ function modularity(graph, partition){
     return intraCommunityWeight / (2 *  m);
 }
 
+function partition(graph, iter = 3){
+    return findBestPartition(graph);
+    // return reindex(rawResult);
+}
+
+function reindex(partition){
+    const lookup = {};
+    const reindexedPartition = {};
+    Object.keys(partition).forEach( (node) => {
+        const assignedCommunity = partition[node];
+        if(!(assignedCommunity in lookup)){
+            lookup[assignedCommunity] = Object.keys(lookup).length;
+        }
+        reindexedPartition[node] = lookup[assignedCommunity];
+    })
+    return reindexedPartition;
+
+}
+
+function findBestPartition(graph){
+    const partition = initialPartition(graph);
+    let currentModularity = modularity(graph, partition);
+    let maxModularity = currentModularity;
+    while(true){
+        graph.nodes().forEach( (node) => {
+            let bestNeighborCommunity = partition[node];
+            let bestModularityGain = 0;
+            graph.neighbors(node).forEach( (neighbor)=>{
+                const proposedPartition =
+                    Object.assign({}, partition);
+                proposedPartition[node] = partition[neighbor];
+                const modularityGain =
+                    modularity(graph, proposedPartition) - modularity(graph, partition);
+                if(modularityGain > bestModularityGain){
+                    bestModularityGain = modularityGain;
+                    bestNeighborCommunity = partition[neighbor];
+                }
+            })
+            partition[node] = bestNeighborCommunity;
+        })
+        break;
+    }
+    return partition;
+}
+
+
+function initialPartition(graph){
+    const partition = {};
+    graph.nodes().forEach( (node, idx)=> {
+        partition[node] = idx;
+    });
+    return partition;
+}
 module.exports = {
-    modularity: modularity
+    partition: partition,
+    //The below functions are exposed for testing purposes.
+    modularity: modularity,
+    reindex: reindex,
 }

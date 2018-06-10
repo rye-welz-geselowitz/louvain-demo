@@ -5,6 +5,10 @@ function ConstructGraph(){
     this.addNode = (node) => {
         this._nodes.add(node);
     }
+    // this.clone = () => {
+    //     const clonedEdges = new Set(this._nodes);
+    //
+    // }
     this.hasNode = (node) => this._nodes.has(node)
     this.hasEdge = (node1, node2) => {
         return !!(this._edges[node1] && this._edges[node1][node2]);
@@ -21,6 +25,14 @@ function ConstructGraph(){
             this._edges[node2] = {};
         }
         this._edges[node2][node1] = 1
+    }
+    this.removeEdge = (node1, node2) => {
+        if(this._edges[node1] && this._edges[node1][node2]){
+            delete this._edges[node1][node2];
+        }
+        if(this._edges[node2] && this._edges[node2][node1]){
+            delete this._edges[node2][node1];
+        }
     }
     this.nodes = () => sorted([...this._nodes]);
     this.edges = () => {
@@ -43,10 +55,6 @@ function ConstructGraph(){
     this.neighbors = (node) => {
         return Object.keys(this._edges[node] || []);
     }
-}
-
-function unique(list){
-    return list.filter((v, i, a) => a.indexOf(v) === i);
 }
 
 function sorted(list){
