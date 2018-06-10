@@ -5,26 +5,34 @@ function modularity(graph, partition){
     }
     const nodes = graph.nodes();
     const intraCommunityWeight =
-        nodes.reduce( (intraCommunityWeightForNetwork, i) => {
-            return (intraCommunityWeightForNetwork
-            + nodes.reduce( (intraCommunityWeightForNode, j) => {
-                if(i !== j && partition[i] === partition[j]){
-                    const A_ij = graph.hasEdge(i,j)? 1 : 0;
-                    const k_i = graph.neighbors(i).length;
-                    const k_j = graph.neighbors(j).length;
-                    const P_ij =  (k_i / m )  * (k_j / m);
-                    const nodePairContribution = A_ij - P_ij;
-                    return intraCommunityWeightForNode + nodePairContribution;
-                }
-                return intraCommunityWeightForNode;
-            }, 0));
-    }, 0);
+        nodes.reduce( (weight, i) => {
+            return accumulateIntraCommunityWeight(weight, i, graph, m, nodes, partition)},
+            0);
     return intraCommunityWeight / (2 *  m);
 }
 
+function accumulateIntraCommunityWeight(intraCommunityWeightForNetwork, i, graph, m, nodes, partition){
+    return (intraCommunityWeightForNetwork
+    + nodes.reduce( (intraCommunityWeightForNode, j) => {
+        return accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j, graph, m, nodes, partition);
+    }, 0));
+}
+
+function accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j, graph, m, nodes, partition){
+    if(i !== j && partition[i] === partition[j]){
+        const A_ij = graph.hasEdge(i,j)? 1 : 0;
+        const k_i = graph.neighbors(i).length;
+        const k_j = graph.neighbors(j).length;
+        const P_ij =  (k_i / m )  * (k_j / m);
+        const nodePairContribution = A_ij - P_ij;
+        return intraCommunityWeightForNode + nodePairContribution;
+    }
+    return intraCommunityWeightForNode;
+}
+
 function partition(graph, iter = 3){
-    return findBestPartition(graph);
-    // return reindex(rawResult);
+    const bestPartition = findBestPartition(graph);
+    return reindex(bestPartition);
 }
 
 function reindex(partition){
@@ -43,8 +51,7 @@ function reindex(partition){
 
 function findBestPartition(graph){
     const partition = initialPartition(graph);
-    let currentModularity = modularity(graph, partition);
-    let maxModularity = currentModularity;
+    let bestModularity = modularity(graph, partition);
     while(true){
         graph.nodes().forEach( (node) => {
             let bestNeighborCommunity = partition[node];
@@ -62,7 +69,13 @@ function findBestPartition(graph){
             })
             partition[node] = bestNeighborCommunity;
         })
-        break;
+        const newModularity = modularity(graph, partition);
+        if(newModularity > bestModularity){
+            bestModularity = newModularity;
+        }
+        else{
+            break;
+        }
     }
     return partition;
 }

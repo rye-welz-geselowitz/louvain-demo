@@ -189,13 +189,13 @@ describe('Lovain method', () => {
         g.addNode('D');
         assert.deepEqual(louvain.partition(g), {'A': 0, 'B': 1, 'C': 2, 'D': 3});
     });
-    // it('for a graph with one edges, places nodes in same community',
-    // () => {
-    //     const g = Graph.Graph();
-    //     g.addEdge('Aa', 'Bb');
-    //     g.addEdge('Cc', 'Db')
-    //     assert.deepEqual(louvain.partition(g), {'Aa': 0, 'Bb': 0, 'Cc': 1, 'Dd': 1});
-    // });
+    it('for a graph with with two pairs of connected nodes, places connected nodes in same community',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('Aa', 'Bb');
+        g.addEdge('Cc', 'Dd')
+        assert.deepEqual(louvain.partition(g), {'Aa': 0, 'Bb': 0, 'Cc': 1, 'Dd': 1});
+    });
 });
 
 describe('Utilities', () => {

@@ -5,10 +5,6 @@ function ConstructGraph(){
     this.addNode = (node) => {
         this._nodes.add(node);
     }
-    // this.clone = () => {
-    //     const clonedEdges = new Set(this._nodes);
-    //
-    // }
     this.hasNode = (node) => this._nodes.has(node)
     this.hasEdge = (node1, node2) => {
         return !!(this._edges[node1] && this._edges[node1][node2]);
