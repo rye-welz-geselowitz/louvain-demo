@@ -1,13 +1,13 @@
 function modularity(graph, partition){
-    const m = graph.edges().length;
-    if(m===0){ return 0; }
+    const m = graph.weight();
+    if(m===0){ return 0;}
     const intraCommunityWeight =
         graph.nodes().reduce( (weight, i) => {
             return (
                 accumulateIntraCommunityWeight(weight,
                     i, graph, m, partition))},
             0);
-    return intraCommunityWeight / (2 *  m);
+    return intraCommunityWeight / (2 * m);
 }
 
 function accumulateIntraCommunityWeight(intraCommunityWeightForNetwork, i, graph, m, partition){
@@ -20,12 +20,19 @@ function accumulateIntraCommunityWeight(intraCommunityWeightForNetwork, i, graph
 }
 
 function accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j, graph, m, partition){
-    if(i !== j && partition[i] === partition[j]){
-        const A_ij = graph.hasEdge(i,j)? 1 : 0;
-        const k_i = graph.neighbors(i).length;
-        const k_j = graph.neighbors(j).length;
-        const P_ij =  (k_i / m )  * (k_j / m);
+    if(i!==j && partition[i] === partition[j]){
+        const A_ij = graph.edgeWeight(i,j);
+        const k_i = graph.degree(i);
+        const k_j = graph.degree(j);
+        const P_ij =  k_i * k_j /  m;
         const nodePairContribution = A_ij - P_ij;
+        // console.log('\n', i, j);
+        // console.log('A_ij', A_ij)
+        // console.log('k_i', k_i)
+        // console.log('k_j', k_j)
+        // console.log('P_ij', P_ij)
+        // console.log('nodePairContribution', nodePairContribution)
+        // console.log('m', m)
         return intraCommunityWeightForNode + nodePairContribution;
     }
     return intraCommunityWeightForNode;
@@ -53,6 +60,7 @@ function reindex(partition){
 // are now the communities found during the first phase. To do so, the weights of the links
 // between the new nodes are given by the sum of the weight of the links between nodes in
 // the corresponding two communities
+
 
 function findBestPartition(graph){
     const partition = initialPartition(graph);

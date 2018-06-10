@@ -27,6 +27,13 @@ describe('Graph data structure', () => {
         assert.deepEqual(g.nodes(), ['A', 'B']);
         assert.deepEqual(g.edges(), [ ['A', 'B'] ]);
     });
+    it('add self loops',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('A', 'A');
+        assert.deepEqual(g.nodes(), ['A']);
+        assert.deepEqual(g.edges(), [ ['A', 'A'] ]);
+    });
     it('add edges between new nodes',
     () => {
         const g = Graph.Graph();
@@ -118,27 +125,61 @@ describe('Graph data structure', () => {
     () => {
         const g = Graph.Graph();
         g.addEdge('B','C');
-        assert.equal(g.weight('C', 'B'), 1);
-        assert.equal(g.weight('B', 'C'), 1);
+        assert.equal(g.edgeWeight('C', 'B'), 1);
+        assert.equal(g.edgeWeight('B', 'C'), 1);
     });
     it('non-existent edge between non-existent nodes has weight of 0',
     () => {
         const g = Graph.Graph();
-        assert.equal(g.weight('C', 'B'), 0);
+        assert.equal(g.edgeWeight('C', 'B'), 0);
     });
     it('non-existent edge between existent nodes has weight of 0',
     () => {
         const g = Graph.Graph();
         g.addNode('C');
         g.addNode('B');
-        assert.equal(g.weight('C', 'B'), 0);
+        assert.equal(g.edgeWeight('C', 'B'), 0);
     });
     it('can add & query weighted edge',
     () => {
         const g = Graph.Graph();
         g.addEdge('C','B', 0.4);
-        assert.equal(g.weight('C', 'B'), 0.4);
-        assert.equal(g.weight('B', 'C'), 0.4);
+        assert.equal(g.edgeWeight('C', 'B'), 0.4);
+        assert.equal(g.edgeWeight('B', 'C'), 0.4);
+    });
+    it('weight of network is sum of all edge weights',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('C','B', 0.4);
+        g.addEdge('C','D');
+        g.addEdge('A','B', 0.6);
+        assert.equal(g.weight(), 2);
+    });
+    it('node with no edges has a degree of 0',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('C');
+        assert.equal(g.degree('C'), 0);
+    });
+    it('non-existent node has a degree of 0',
+    () => {
+        const g = Graph.Graph();
+        assert.equal(g.degree('C'), 0);
+    });
+    it('degree of a node with edges is the sum of its edge weights',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('C','B', 0.4);
+        g.addEdge('C','D');
+        g.addEdge('A','B', 0.6);
+        assert.equal(g.degree('C'), 1.4);
+    });
+    it('degree of a node includes edges with self',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('A','B', 0.4);
+        g.addEdge('A','A');
+        assert.equal(g.degree('A'), 1.4);
     });
 });
 
@@ -161,8 +202,9 @@ describe('Modularity evaluation', () => {
         g.addNode('a');
         g.addEdge('b', 'c')
         const community1 = 'C1';
-        const partition = { 'a': community1, 'b': community1, 'c': community1}
-        assert.equal(louvain.modularity(g, partition), 0);
+        const partition = { 'a': community1, 'b': community1, 'c': community1};
+        const modularity = louvain.modularity(g, partition);
+        assert.equal(modularity, 0);
     });
     it('modularity of a partition with multiple communities, where all edges are intra-community, approaches 1',
     () => {
@@ -175,19 +217,55 @@ describe('Modularity evaluation', () => {
 
         }
         const modularity = louvain.modularity(g, partition);
-        assert.ok( modularity > 0.99 && modularity <= 1);
+        assert.ok( modularity > 0.98 && modularity <= 1);
     });
-    it('modularity of a partition with multiple communities, where half of edges are intra-community, approaches 0.5',
+    it('modularity of a partition with multiple communities where half of edges (with consistent weights) are intra-community, approaches 0.5',
     () => {
         const g = Graph.Graph();
         const partition = {};
-        for(var i=0; i<100;i++){
+        for(var i=0; i<200;i++){
             g.addEdge(i+'a', i+'b');
             partition[i+'a'] = i;
             partition[i+'b'] = i%2? i : i - 1;
         }
         const modularity = louvain.modularity(g, partition);
-        assert.ok( modularity > 0.49 && modularity <= 0.5);
+        assert.ok( modularity > 0.48 && modularity <= 0.5);
+    });
+    //TODO: clarify case
+    it('modularity of a partition with multiple communities, where half of weight of the edges is intra-community, equal number of nodes, approaches 0.5',
+    () => {
+        const g = Graph.Graph();
+        const partition = {};
+        //Generate 100 edges of weight 2.
+        //Generate 100 edges of weight 4.
+        //Half of weight 2 edges are intra-community.
+        //Half of weight 4 edges are intra-community.
+        for(var i=0; i<200;i++){
+            const weight = i < 50? 2 : 4;
+            g.addEdge(i+'a', i+'b', weight);
+            partition[i+'a'] = i;
+            partition[i+'b'] = i%2? i : i - 1;
+        }
+        const modularity = louvain.modularity(g, partition);
+        assert.ok( modularity > .48 && modularity <= 0.5);
+    });
+    //TODO: clarify case
+    it('modularity of a partition with multiple communities - where half of weight of the edges is intra-community, unequal numbers of nodes, approaches 0.5',
+    () => {
+        const g = Graph.Graph();
+        const partition = {};
+        for(var i=0; i<200;i++){
+            g.addEdge(i+'a', i+'b', 1);
+            partition[i+'a'] = i;
+            partition[i+'b'] = i-1;
+        }
+        for(var i=0; i<100;i++){
+            g.addEdge(i+'A', i+'B', 2);
+            partition[i+'A'] = i*100;
+            partition[i+'B'] = i*100;
+        }
+        const modularity = louvain.modularity(g, partition);
+        assert.ok( modularity > .48 && modularity <= 0.5);
     });
     it('modularity of a partition with multiple communities, edges, and no intra-community edges is less than 0',
     () => {
