@@ -1,34 +1,42 @@
-/* Implementation of undirected, unweighted graph*/
+/* Implementation of undirected, weighted graph*/
 function ConstructGraph(){
+    //Instantiate empty nodes & edges
     this._nodes = new Set();
     this._edges = {}
+    //Add nodes and edges
     this.addNode = (node) => {
         this._nodes.add(node);
     }
-    this.hasNode = (node) => this._nodes.has(node)
-    this.hasEdge = (node1, node2) => {
-        return !!(this._edges[node1] && this._edges[node1][node2]);
-    }
-    this.addEdge = (node1, node2) => {
+    this.addEdge = (node1, node2, weight = 1) => {
         [node1, node2].forEach( (node) => {
             if(!this.hasNode(node)) { this.addNode(node)}
         })
-        if(!this._edges[node1]){
+        if(!(node1 in this._edges)){
             this._edges[node1] = {};
         }
-        this._edges[node1][node2] = 1
-        if(!this._edges[node2]){
+        this._edges[node1][node2] = weight;
+        if(!(node2 in this._edges)){
             this._edges[node2] = {};
         }
-        this._edges[node2][node1] = 1
+        this._edges[node2][node1] = weight;
     }
+    // Remove nodes & edges
     this.removeEdge = (node1, node2) => {
-        if(this._edges[node1] && this._edges[node1][node2]){
+        if(this.hasEdge(node1, node2)){
             delete this._edges[node1][node2];
-        }
-        if(this._edges[node2] && this._edges[node2][node1]){
             delete this._edges[node2][node1];
         }
+    }
+    this.removeNode = (node) => {
+        this.neighbors(node).forEach( (neighbor)=> {
+            this.removeEdge(node, neighbor);
+        })
+        this._nodes.delete(node);
+    }
+    //Query nodes & edges
+    this.hasNode = (node) => this._nodes.has(node)
+    this.hasEdge = (node1, node2) => {
+        return node1 in this._edges && node2 in this._edges[node1];
     }
     this.nodes = () => sorted([...this._nodes]);
     this.edges = () => {
@@ -47,6 +55,9 @@ function ConstructGraph(){
             }, [])
             return acc.concat(edgeTuples);
         }, []);
+    }
+    this.weight = (node1, node2) => {
+        return this.hasEdge(node1, node2)? this._edges[node1][node2] : 0;
     }
     this.neighbors = (node) => {
         return Object.keys(this._edges[node] || []);

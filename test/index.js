@@ -63,6 +63,18 @@ describe('Graph data structure', () => {
         assert.deepEqual(g.nodes(), ['A', 'C', 'D']);
         assert.deepEqual(g.edges(), [ ['C', 'D'] ]);
     });
+    it('removing a node removes its edges',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('B', 'A');
+        g.addEdge('B', 'C');
+        g.addEdge('A', 'C');
+        assert.deepEqual(g.nodes(), ['A', 'B', 'C']);
+        assert.deepEqual(g.edges(), [ ['A', 'B'],  ['B', 'C'], ['A', 'C'] ]);
+        g.removeNode('B');
+        assert.deepEqual(g.nodes(), ['A', 'C']);
+        assert.deepEqual(g.edges(), [['A', 'C']]);
+    });
     it('determine that graph contains a node',
     () => {
         const g = Graph.Graph();
@@ -101,6 +113,32 @@ describe('Graph data structure', () => {
         g.addNode('A');
         g.addEdge('B','C');
         assert.deepEqual(g.neighbors('A'), []);
+    });
+    it('edge with unspecified weight has weight of 1',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('B','C');
+        assert.equal(g.weight('C', 'B'), 1);
+        assert.equal(g.weight('B', 'C'), 1);
+    });
+    it('non-existent edge between non-existent nodes has weight of 0',
+    () => {
+        const g = Graph.Graph();
+        assert.equal(g.weight('C', 'B'), 0);
+    });
+    it('non-existent edge between existent nodes has weight of 0',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('C');
+        g.addNode('B');
+        assert.equal(g.weight('C', 'B'), 0);
+    });
+    it('can add & query weighted edge',
+    () => {
+        const g = Graph.Graph();
+        g.addEdge('C','B', 0.4);
+        assert.equal(g.weight('C', 'B'), 0.4);
+        assert.equal(g.weight('B', 'C'), 0.4);
     });
 });
 

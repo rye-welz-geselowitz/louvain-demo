@@ -1,24 +1,25 @@
 function modularity(graph, partition){
     const m = graph.edges().length;
-    if(m===0){
-        return 0;
-    }
-    const nodes = graph.nodes();
+    if(m===0){ return 0; }
     const intraCommunityWeight =
-        nodes.reduce( (weight, i) => {
-            return accumulateIntraCommunityWeight(weight, i, graph, m, nodes, partition)},
+        graph.nodes().reduce( (weight, i) => {
+            return (
+                accumulateIntraCommunityWeight(weight,
+                    i, graph, m, partition))},
             0);
     return intraCommunityWeight / (2 *  m);
 }
 
-function accumulateIntraCommunityWeight(intraCommunityWeightForNetwork, i, graph, m, nodes, partition){
+function accumulateIntraCommunityWeight(intraCommunityWeightForNetwork, i, graph, m, partition){
     return (intraCommunityWeightForNetwork
-    + nodes.reduce( (intraCommunityWeightForNode, j) => {
-        return accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j, graph, m, nodes, partition);
+    + graph.nodes().reduce( (intraCommunityWeightForNode, j) => {
+        return (
+            accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode,
+                i, j, graph, m, partition));
     }, 0));
 }
 
-function accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j, graph, m, nodes, partition){
+function accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j, graph, m, partition){
     if(i !== j && partition[i] === partition[j]){
         const A_ij = graph.hasEdge(i,j)? 1 : 0;
         const k_i = graph.neighbors(i).length;
@@ -46,8 +47,12 @@ function reindex(partition){
         reindexedPartition[node] = lookup[assignedCommunity];
     })
     return reindexedPartition;
-
 }
+
+// The second phase of the algorithm consists in building a new network whose nodes
+// are now the communities found during the first phase. To do so, the weights of the links
+// between the new nodes are given by the sum of the weight of the links between nodes in
+// the corresponding two communities
 
 function findBestPartition(graph){
     const partition = initialPartition(graph);
