@@ -18,6 +18,13 @@ describe('Graph data structure', () => {
         assert.deepEqual(g.nodes(), ['A', 'B', 'C']);
         assert.deepEqual(g.edges(), []);
     });
+    it('adding same node twice does not result in duplicates',
+    () => {
+        const g = Graph.Graph();
+        g.addNode('C');
+        g.addNode('C');
+        assert.deepEqual(g.nodes(), ['C']);
+    });
     it('add edges between existing nodes',
     () => {
         const g = Graph.Graph();
@@ -294,7 +301,7 @@ describe('Lovain method', () => {
     it('for an empty graph produces an empty partition',
     () => {
         const g = Graph.Graph();
-        assert.deepEqual(louvain.partition(g), {});
+        assert.deepEqual(louvain.partition(g).partition, {});
     });
     it('for a graph with no edges, places each node in own community',
     () => {
@@ -303,20 +310,119 @@ describe('Lovain method', () => {
         g.addNode('B');
         g.addNode('C');
         g.addNode('D');
-        assert.deepEqual(louvain.partition(g), {'A': 0, 'B': 1, 'C': 2, 'D': 3});
+        assert.deepEqual(louvain.partition(g).partition, {'A': 0, 'B': 1, 'C': 2, 'D': 3});
     });
-    it('for a graph with with two pairs of connected nodes, places connected nodes in same community',
+    it('for a graph with two pairs of connected nodes, places connected nodes in same community',
     () => {
         const g = Graph.Graph();
         g.addEdge('Aa', 'Bb');
         g.addEdge('Cc', 'Dd')
-        assert.deepEqual(louvain.partition(g), {'Aa': 0, 'Bb': 0, 'Cc': 1, 'Dd': 1});
+        assert.deepEqual(louvain.partition(g).partition, {'Aa': 0, 'Bb': 0, 'Cc': 1, 'Dd': 1});
     });
+    // it('achieves optimum modularity for a large graph',
+    // () => {
+    //     const g = Graph.Graph();
+    //     const partition = {};
+    //     for(var i=0; i<100;i++){
+    //         g.addEdge(i+'a', i+'b');
+    //         partition[i+'a'] = i;
+    //         partition[i+'b'] = i;
+    //
+    //     }
+    //     assert.deepEqual(louvain.partition(g).partition, partition);
+    // });
 });
 
 describe('Utilities', () => {
     it('reindex takes a partition and removes gaps in community indices', () => {
         const partition = {'a': 0, 'b': 2, 'c': 2, 'd': 0, 'e': 60};
         assert.deepEqual(louvain.reindex(partition), {'a': 0, 'b': 1, 'c': 1, 'd': 0, 'e': 2});
-    })
+    });
+    it('groupByCommunity takes a partition and returns object whose keys are community labels and whose values are lists of nodes therein', () => {
+        const partition = {'a': 0, 'b': 2, 'c': 2, 'd': 0, 'e': 60};
+        const expected = {0: ['a', 'd'], 2: ['b', 'c'], 60: ['e']}
+        assert.deepEqual(louvain.groupByCommunity(partition), expected);
+    });
+    it('calculateIntraCommunityEdgeWeight finds weight of all edges between two communities', () => {
+        const g = Graph.Graph();
+        g.addEdge('a', 'b', 10);
+        g.addEdge('a', 'c', 5);
+        g.addEdge('b', 'c', 15);
+        g.addEdge('d', 'e', 5);
+        g.addEdge('d', 'a', 20);
+        const lookup = {
+            0: ['d', 'b'],
+            1: ['a', 'c'],
+            2: ['e']
+        }
+        const actual = louvain.calculateIntraCommunityEdgeWeight(g, lookup, 0, 1);
+        assert.deepEqual(actual, 45);
+    });
+    it('calculateIntraCommunityEdgeWeight finds weight of all edges within one community', () => {
+        const g = Graph.Graph();
+        g.addEdge('a', 'b', 10);
+        g.addEdge('a', 'c', 5);
+        g.addEdge('b', 'c', 15);
+        g.addEdge('d', 'e', 5);
+        g.addEdge('d', 'a', 20);
+        const lookup = {
+            0: ['a', 'b'],
+            1: ['c', 'd'],
+            2: ['e']
+        }
+        const actual = louvain.calculateIntraCommunityEdgeWeight(g, lookup, 0, 0);
+        assert.deepEqual(actual, 10);
+    });
+    it('reconstituteNetwork should preserve weight of original graph', () => {
+        const g = Graph.Graph();
+        g.addEdge('a', 'b', 10);
+        g.addEdge('a', 'c', 5);
+        g.addEdge('b', 'c', 15);
+        g.addEdge('d', 'e', 5);
+        g.addEdge('d', 'a', 20);
+        const partition = {
+            'a': '0',
+            'b': '0',
+            'c': '1',
+            'd': '1',
+            'e': '2'
+        };
+        const reconstituted = louvain.reconstituteNetwork(g, partition);
+        assert.equal(reconstituted.weight(), g.weight());
+    });
+    it('reconstituteNetwork creates new network whose nodes are communities of old network', () => {
+        const g = Graph.Graph();
+        g.addEdge('a', 'b', 10);
+        g.addEdge('a', 'c', 5);
+        g.addEdge('b', 'c', 15);
+        g.addEdge('d', 'e', 5);
+        g.addEdge('d', 'a', 20);
+        const partition = {
+            'a': '0',
+            'b': '0',
+            'c': '1',
+            'd': '1',
+            'e': '2'
+        };
+        const reconstituted = louvain.reconstituteNetwork(g, partition);
+        assert.deepEqual(reconstituted.nodes(), ['0', '1', '2']);
+    });
+    it('reconstituteNetwork creates new network whose edges reflect the weights of edges between communities in original', () => {
+        const g = Graph.Graph();
+        g.addEdge('a', 'b', 10);
+        g.addEdge('a', 'c', 5);
+        g.addEdge('b', 'c', 15);
+        g.addEdge('d', 'a', 20);
+        const partition = {
+            'a': '0',
+            'b': '0',
+            'c': '1',
+            'd': '1',
+        };
+        const reconstituted = louvain.reconstituteNetwork(g, partition);
+        assert.equal(40, reconstituted.edgeWeight('0', '1'));
+        assert.equal(10, reconstituted.edgeWeight('0', '0'));
+        assert.equal(0, reconstituted.edgeWeight('1', '1'));
+
+    });
 });

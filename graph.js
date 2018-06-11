@@ -63,11 +63,9 @@ function ConstructGraph(){
         return Object.keys(this._edges[node] || []);
     }
     this.weight = () => {
-        return (Object.keys(this._edges).reduce( (acc, node1) => {
-            return (acc + Object.keys(this._edges[node1]).reduce( (innerAcc, node2) => {
-                return innerAcc + this._edges[node1][node2];
-            }, 0));
-        }, 0) / 2);
+        return (this.edges().reduce( (acc, edgeTuple) => {
+            return acc + this.edgeWeight(edgeTuple[0], edgeTuple[1]);
+        }, 0));
     }
     this.degree = (node) => {
         return this.neighbors(node).reduce( (acc, neighbor)=> {
@@ -75,8 +73,6 @@ function ConstructGraph(){
         }, 0)
     }
 }
-
-//TODO: deal wih self loops!
 
 function sorted(list){
     return list.slice().sort();

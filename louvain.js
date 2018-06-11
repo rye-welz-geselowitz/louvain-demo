@@ -1,3 +1,5 @@
+const Graph = require('./graph');
+
 function modularity(graph, partition){
     const m = graph.weight();
     if(m===0){ return 0;}
@@ -26,21 +28,33 @@ function accumulateIntraCommunityWeightForNode(intraCommunityWeightForNode, i, j
         const k_j = graph.degree(j);
         const P_ij =  k_i * k_j /  m;
         const nodePairContribution = A_ij - P_ij;
-        // console.log('\n', i, j);
-        // console.log('A_ij', A_ij)
-        // console.log('k_i', k_i)
-        // console.log('k_j', k_j)
-        // console.log('P_ij', P_ij)
-        // console.log('nodePairContribution', nodePairContribution)
-        // console.log('m', m)
         return intraCommunityWeightForNode + nodePairContribution;
     }
     return intraCommunityWeightForNode;
 }
 
-function partition(graph, iter = 3){
-    const bestPartition = findBestPartition(graph);
-    return reindex(bestPartition);
+function partition(graph){
+    let currentGraph = graph;
+    let {partition, modularity} = findBestPartition(currentGraph);
+    let currentPartition = partition;
+    let bestModularity = modularity;
+    while(true){
+        console.log('\n\n\n\n')
+        console.log(currentGraph.nodes())
+        console.log(currentPartition)
+        console.log(bestModularity)
+        let {partition, modularity} = findBestPartition(currentGraph);
+        if(modularity > bestModularity){
+            currentPartition = partition;
+            bestModularity = modularity;
+            currentGraph = reconstituteNetwork(currentGraph, currentPartition);
+        }
+        else{
+            break;
+        }
+    }
+    //TODO: map between iterations of algorithm!
+    return {partition: reindex(currentPartition), modularity: bestModularity};
 }
 
 function reindex(partition){
@@ -60,6 +74,47 @@ function reindex(partition){
 // are now the communities found during the first phase. To do so, the weights of the links
 // between the new nodes are given by the sum of the weight of the links between nodes in
 // the corresponding two communities
+function reconstituteNetwork(originalNetwork, partition){
+    const network = Graph.Graph();
+    const newNodes = new Set();
+    const communityToNodesLookup = groupByCommunity(partition);
+    Object.keys(partition).forEach( (key) => {
+        network.addNode(partition[key]);
+    })
+    network.nodes().forEach( (i) => {
+        network.nodes().forEach( (j) => {
+            if(i<=j){
+                const weight = calculateIntraCommunityEdgeWeight(originalNetwork, communityToNodesLookup,  i, j)
+                network.addEdge(i, j, weight)
+            }
+
+        })
+    })
+    return network;
+}
+
+function groupByCommunity(partition){
+    const lookup = {};
+    Object.keys(partition).forEach( (node) => {
+        if(!(partition[node] in lookup)){
+            lookup[partition[node]] = [];
+        }
+        lookup[partition[node]].push(node)
+    })
+    return lookup;
+}
+
+function calculateIntraCommunityEdgeWeight(network, communityToNodeLookup, community1, community2){
+    //Weight of all edges between nodes in i and nodes in j
+    let sum = 0;
+    communityToNodeLookup[community1].forEach( (c1Node) => {
+        communityToNodeLookup[community2].forEach( (c2Node) => {
+            sum+=network.edgeWeight(c1Node, c2Node);
+
+        })
+    })
+    return community1 === community2 ? sum/2 : sum; //Prevent double counting in same community
+}
 
 
 function findBestPartition(graph){
@@ -90,14 +145,14 @@ function findBestPartition(graph){
             break;
         }
     }
-    return partition;
+    return {partition: partition, modularity: bestModularity};
 }
 
 
 function initialPartition(graph){
     const partition = {};
     graph.nodes().forEach( (node, idx)=> {
-        partition[node] = idx;
+        partition[node] = idx.toString();
     });
     return partition;
 }
@@ -106,4 +161,7 @@ module.exports = {
     //The below functions are exposed for testing purposes.
     modularity: modularity,
     reindex: reindex,
+    groupByCommunity: groupByCommunity,
+    calculateIntraCommunityEdgeWeight: calculateIntraCommunityEdgeWeight,
+    reconstituteNetwork: reconstituteNetwork
 }
